@@ -3,7 +3,7 @@
  * Sistema de Categorización Meteorológica - Bogotá
  * Sistemas Operativos 2026-30
  *
- * Uso: ./monitor -b tamBuffer -p pipeNom
+ * Uso: ./monitor -b tamBuffer -p pipeNom -n numAgentes
  *
  * Arquitectura de hilos:
  *   - Hilo Recolector : lee del pipe nominal y deposita en el buffer
@@ -52,7 +52,8 @@ typedef struct {
 /* ================================================================== */
 /* Variables globales                                                  */
 /* ================================================================== */
-static int            tam_buffer   = 0;
+static int            tam_buffer            = 0;
+static int            num_agentes_esperados = 0;  /* -n: agentes que se conectarán */
 static char          *pipeNom      = NULL;
 static FILE          *log_consol   = NULL;
 
@@ -313,12 +314,11 @@ static void *hilo_recolector(void *arg) {
             }
 
             /* FIX: leer total_agentes/total_fin dentro del mutex */
-            int fin_local    = total_fin;
-            int agentes_local = total_agentes;
+            int fin_local = total_fin;
 
             pthread_mutex_unlock(&mutex_est);
 
-            if (agentes_local > 0 && fin_local >= agentes_local) {
+            if (num_agentes_esperados > 0 && fin_local >= num_agentes_esperados) {
                 break;   /* Todos los agentes terminaron */
             }
             continue;
@@ -453,12 +453,13 @@ static void liberar_recursos(void) {
 int main(int argc, char *argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, argv, "b:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:p:n:")) != -1) {
         switch (opt) {
             case 'b': tam_buffer = atoi(optarg); break;
-            case 'p': pipeNom    = optarg;       break;
+            case 'p': pipeNom               = optarg;       break;
+            case 'n': num_agentes_esperados = atoi(optarg); break;
             default:
-                fprintf(stderr, "Uso: %s -b tamBuffer -p pipeNom\n", argv[0]);
+                fprintf(stderr, "Uso: %s -b tamBuffer -p pipeNom -n numAgentes\n", argv[0]);
                 return EXIT_FAILURE;
         }
     }
@@ -469,6 +470,10 @@ int main(int argc, char *argv[]) {
     }
     if (!pipeNom) {
         fprintf(stderr, "Error: debe especificarse -p pipeNom.\n");
+        return EXIT_FAILURE;
+    }
+    if (num_agentes_esperados <= 0) {
+        fprintf(stderr, "Error: debe especificarse -n numAgentes (> 0).\n");
         return EXIT_FAILURE;
     }
 
