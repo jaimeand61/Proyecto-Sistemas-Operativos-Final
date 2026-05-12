@@ -1,0 +1,381 @@
+﻿=== PAGINA 1 ===
+Facultad de Ingenier├¡a
+Departamento de Ingenier├¡a de Sistemas
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+Proyecto de Sistemas Operativos 2026-30
+Sistema de Categorizaci├│n Meteorol├│gica
+1. Objetivos principales
+a. Resolver un problema utilizando procesos e hilos de la biblioteca POSIX.
+b. Emplear mecanismos de sincronizaci├│n de procesos, hilos y comunicaci├│n de
+procesos usando pipes.
+c. Utilizar de forma correcta llamadas al sistema relacionadas con hilos y procesos.
+2. Descripci├│n general
+En este proyecto se requiere implementar un sistema que permita hacer una
+clasificaci├│n robusta del clima en la ciudad de Bogot├í. El clima en Bogot├í es de alta
+monta├▒a tropical, es decir, con temperaturas relativamente constantes durante el a├▒o
+pero alta variabilidad diaria de lluvia y nubosidad. La Tabla 1, a continuaci├│n presenta
+los valores extremos aceptables por la emisi├│n de los sensores, que deber├¡an enviar las
+diferentes estaciones meteorol├│gicas de Bogot├í (fuente IDEAM).
+Par├ímetro Meteorol├│gico Valor M├íximo Valor M├¡nimo
+Humedad Relativa: % 100 77
+Presi├│n Atmosf├®rica: hPa 760 740
+Punto de Roc├¡o: ┬░C 12 3
+Tabla 1. Valores aceptables de los par├ímetros por estaci├│n
+En general, con los 3 par├ímetros enviados por cada estaci├│n se puede hacer un Sistema
+de Categorizaci├│n Meteorol├│gica para Bogot├í basados en la combinaci├│n de los valores
+aceptables. La Tabla 2, a continuaci├│n presenta la categorizaci├│n deseada.
+Categor├¡a Humedad Roc├¡o Presi├│n
+Lluvioso >90 >9 <750
+Nublado 80-95 >8 751
+Fresco <80 5-8 >754
+Tabla 2. Categor├¡as para el Sistemas de Categorizaci├│n Metorol├│gica
+1
+
+=== PAGINA 2 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+Se requiere dise├▒ar e implementar un sistema que tenga Agentes de Mediciones y un control
+de Categorizaci├│n el cual actuar├í como monitor. Los agentes son programas que se
+encargan de la captura de las medidas de los sensores por cada estaci├│n. Los agentes se
+encargan de solo transmitir las medidas de las estaciones o los par├ímetros que est├®n en el
+rango aceptable, seg├║n la Tabla 1. Los agentes env├¡an las mediciones o par├ímetros al
+proceso monitor o Control de Categorizaci├│n, que se encarga de almacenarlos. Al final de
+la simulaci├│n el monitor debe presentar un reporte de Categor├¡a Meteorol├│gica seg├║n los
+datos presentes en la Tabla 2. La Figura 1, presenta los componentes b├ísicos del sistema.
+Figura 1. Componentes b├ísicos del Sistema de Categorizaci├│n Meteorol├│gica
+3. Implementaci├│n del sistema
+a. Agente de Mediciones
+Funciones Principales:
+ÔùÅ Un agente de mediciones lee los reportes de una estaci├│n. Los reportes vienen en un
+archivo que presenta la identificaci├│n de la estaci├│n (ET, EK, etc) junto con la toma
+de medidas de los sensores.
+ÔùÅ El proceso acepta las medidas en funci├│n de si los valores est├ín en el rango
+aceptables para los par├ímetros medidos (ver Tabla 1), en caso contrario los rechaza y
+no los transmite al monitor.
+ÔùÅ Cada env├¡o de lectura al monitor est├í separado por un tiempo dado por el usuario.
+2
+
+=== PAGINA 3 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+Invocaci├│n del proceso agente de medici├│n:
+Los procesos agentes de medici├│n se invocan desde una terminal/shell/consola de la
+siguiente forma:
+$./agenteM -f nombreArchivo -t tiempo -p pipeNom
+Donde:
+Ô×ö -f flag o bandera que indica que a continuaci├│n se da el par├ímetro nombreArchivo.
+Ô×ö nombreArchivo cadena de caracteres que identifica el nombre del fichero que tiene
+las medidas de los sensores. El fichero de texto contiene en cada l├¡nea una lectura de
+cada uno de los 3 sensores de la estaci├│n, y otros datos. Los valores van separados
+por coma (csv), a continuaci├│n se presenta un ejemplo del formato:
+EK,90,9,750,08:00:00
+EK,90,9,750,09:01:00
+EK,89,8,749,10:00:00
+EK,79,4,720,11:00:00
+.
+El primer valor es una cadena de caracteres para identificar la estaci├│n de
+procedencia de los datos (el ejemplo es la Estaci├│n Kennedy o EK). El segundo es la
+humedad, roc├¡o y presi├│n respectivamente. El ├║ltimo valor es la hora en la que se
+realiz├│ la medici├│n. Los valores num├®ricos de los sensores son n├║meros enteros. El
+agente lee la l├¡nea, identifica s├¡ son par├ímetros aceptables y de ser as├¡ los env├¡a al
+pipe de comunicaci├│n. Espera el tiempo t dado por el usuario, y procede a leer la
+siguiente l├¡nea del archivo. Al final del fichero debe haber un punto para determinar
+el fin de la lectura.
+Ô×ö -t flag o bandera que indica que a continuaci├│n se da el par├ímetro tiempo.
+Ô×ö tiempo indica el tiempo en segundos que debe esperar para leer la siguiente l├¡nea del
+archivo de sensores.
+Ô×ö -p flag o bandera que indica que a continuaci├│n se da el pipeRecibe
+Ô×ö pipeNominal nombre de pipe por el cual los agentes env├¡an informaci├│n al Control de
+Categorizaci├│n (sistema monitor). Es el mismo pipe que recibe el Control de
+Categorizaci├│n en el momento de su invocaci├│n.
+ÔùÅ Nota 1: Cada agente de medici├│n se debe ejecutar en una terminal diferente.
+Adicionalmente, en la sustentaci├│n el profesor tendr├í diferentes ficheros de
+3
+
+=== PAGINA 4 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+prueba para ejecuciones. En otras palabras, los procesos se ejecutan de forma
+concurrente.
+ÔùÅ Nota 2: la implementaci├│n de las banderas (flags) como argumentos de entrada a
+los agentes y el monitor es obligatoria. La idea es poder cambiar el orden de los
+par├ímetros seg├║n desee el usuario y que el sistema pueda operar de la misma
+forma. Por ejemplo, las siguientes dos invocaciones son correctas:
+$./agenteM -f sensorKen.csv -t 1 -p pipeNom
+$./agenteM -p nombrePipe -t 2 -f Teusaquillo.csv
+Fin de Lectura de Archivos
+Cuando el agente de medici├│n alcance la l├¡nea que comienza con un punto, esta se
+considera la ├║ltima l├¡nea del archivo, se espera un tiempo adicional -t y luego se
+finaliza el proceso Agente de Medici├│n, mostrando en su consola un mensaje de fin
+de lectura de sensores y el nombre de la estaci├│n; posteriormente el proceso debe
+entregar el control de la consola/shell/terminal al SO. A continuaci├│n un ejemplo
+de invocaci├│n y finalizaci├│n del proceso.
+sistemas@clusterhpc:~$
+sistemas@clusterhpc:~$./agenteM -f sensorKen.csv -t 1 -p pipeNom
+... Agente de Medici├│n en proceso!!!
+Fin de Lectura de Sensores de la Estaci├│n EK!!!
+sistemas@clusterhpc:~$
+sistemas@clusterhpc:~$
+b. Monitor: Control de Categorizaci├│n
+Funciones principales
+ÔùÅ Es el proceso que recibe las medidas de los sensores. El monitor debe
+conformarse por hilos que realicen las funciones de captura las mediciones
+enviadas por los procesos sensores.
+ÔùÅ Los reportes se almacenan en un solo archivo (archivo consolidado). El archivo
+debe contener el nombre de estaci├│n donde se tom├│ la medida, los valores
+medidos y tiempo en el que se realiz├│ la medida.
+ÔùÅ Se deben crear buffers y estructura de datos que el grupo del proyecto considere
+necesarios. En el ejemplo de la Figura 1, se observa la creaci├│n de un buffer
+4
+
+=== PAGINA 5 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+para cada estaci├│n de toma de muestras. El tama├▒o del buffer es igual para
+todos y es un valor argumento de entrada al proceso monitor.
+ÔùÅ Se deben crear hilos o procesos que el grupo del proyecto considere necesarios
+para hacer la lectura de los buffers correspondientes, c├ílculos de promedios,el
+proceso de clasificaci├│n y la generaci├│n del reporte final por consola. En la
+Figura 1, se observa que se han creado 4 hilos. El primer hilo o Hilo Recolector
+es el encargado de ubicar la lectura en el buffer correspondiente. Los 3 hilos
+restantes o Hilos Consumidores se encargan de leer un buffer y escribir su
+resultado en el archivo consolidado. Al leer del buffer los hilos consumidores si
+detectan que faltan mediciones, porque hay dos o m├ís horas consecutivas en las
+que no hay datos, escribe por la consola un mensaje de alarma, indicando que
+hay datos faltantes, por favor revisar el sensor.
+ÔùÅ El Hilo Recolector enviar├í informaci├│n a los otros hilos usando el patr├│n
+productor/consumidor con buffer acotado. Se implementar├í el patr├│n seg├║n lo
+visto en clase, es decir, los Hilos Consumidores se bloquean si el buffer est├í
+vac├¡o y el Hilo Recolector se debe bloquear cuando no hay m├ís espacio en el
+buffer. Los procesos se sincronizan utilizando los sem├íforos de la API POSIX y
+las operaciones sobre los sem├íforos vistas en la clase.
+ÔùÅ Al final del tiempo simulado y seg├║n el promedio de los par├ímetros de cada
+estaci├│n, se emite por consola un mensaje con la Categor├¡a Meteorol├│gica (ver
+Tabla 2). La estrategia de c├ílculo de promedios y categorizaci├│n es creada por el
+grupo del proyecto.
+Invocaci├│n del proceso Monitor:
+El proceso monitor se invoca desde una terminal/shell/consola de la siguiente forma:
+$./monitor -b tamBuffer -p pipeNom
+Donde:
+Ô×ö -b flag o bandera que indica que a continuaci├│n se da el valor tamBuffer
+Ô×ö tamBuffer el tama├▒o de los buffer medido en registros de lecturas (l├¡nea del archivo de
+estaci├│n), por ejemplo, si aqu├¡ hay un n├║mero 2, es porque se establece espacio para dos
+l├¡neas de medici├│n de una estaci├│n, donde el Hilo Recolector dispone o coloca las
+medidas.
+Ô×ö -p flag o bandera que indica que a continuaci├│n se da el pipeNom
+Ô×ö pipeNom nombre de pipe nominal por el cual los agentes van a enviar la informaci├│n de
+las medidas. Las medidas son recibidas por el Hilo Recolector . Para el funcionamiento
+general del sistema, el primer proceso que se levanta es el Monitor, en el cual va el
+5
+
+=== PAGINA 6 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+nombre del pipe nominal. Entonces, los agentes se levantan como procesos haciendo uso
+del mismo pipe nominal invocado o creado por el monitor.
+Inicializaci├│n del Monitor
+ÔùÅ El proceso inicializa sus estructuras de datos, realiza las inicializaciones
+correspondientes, crea y abre el pipeNom para las comunicaciones con los agentes. Una
+vez realizadas estas tareas, se dispone a esperar los mensajes de los agentes.
+ÔùÅ Se crea el archivo consolidado para almacenar todas los valores de los hilos
+consumidores. El nombre del archivo consolidado debe ser dado por el grupo y la
+extensi├│n debe ser csv. A continuaci├│n se muestra la estructura del fichero de salida:
+EK,90,9,750,08:00:00
+ET,90,9,750,08:00:00
+EU,89,8,749,08:00:00
+EK,79,4,720,09:01:00
+Se puede observar que el archivo consolidado tiene la hora actual de acceso al fichero, y
+las escrituras dadas por los Hilos Consumidores, que son los par├ímetros en orden:
+humedad, roc├¡o y presi├│n. Se observa tambi├®n que el archivo estar├í disponible para
+escritura por los Hilos Consumidores a lo largo de la simulaci├│n.
+Finalizaci├│n del Monitor
+ÔùÅ El monitor termina cuando finaliza el env├¡o de todos los Agentes de Mediciones.
+ÔùÅ Al terminar la simulaci├│n, el monitor cierra el archivo consolidado e imprime el
+reporte de Categorizaci├│n. El reporte se calcular├í en base al promedio de todos los
+par├ímetros y seg├║n las categor├¡as de la Tabla 2, y emitir├í el parte meteorol├│gico.
+Posteriormente, el proceso debe entregar el control de la consola/shell/terminal al
+SO. A continuaci├│n un ejemplo de invocaci├│n y finalizaci├│n del proceso.
+sistemas@clusterhpc:~$
+sistemas@clusterhpc:~$./monitor -b 4 -p pipeNom
+... Control de Categorizaci├│n Meteorol├│gica!!!
+Parte Meteorol├│gico Bogot├í: ÔÇ£LluviosoÔÇØ
+Fin del MonitorÔÇª!!!
+sistemas@clusterhpc:~$
+6
+
+=== PAGINA 7 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+4. Entrega del Proyecto
+La entrega final del proyecto y la sustentaci├│n est├í programada entre las semanas
+16 y 17 (entre el 19 y 25 de mayo), en los horarios de clase. La entrega consiste
+en los c├│digos fuente del proyecto y un archivo Makefile, dentro de una carpeta
+comprimida (.zip, .tar). Los proyectos que NO se entreguen para la fecha
+programada por el profesor, NO ser├ín evaluados NI se podr├ín sustentar. Para la
+sustentaci├│n, el profesor indicar├í los archivos de entrada y los casos de prueba.
+Adicionalmente, se preguntar├í sobre estrategias para la sincronizaci├│n de los
+ficheros empleadas y justificaciones sobre las decisiones tomadas para la soluci├│n
+de los diferentes requerimientos.
+5. Observaciones adicionales
+ÔùÅ El proyecto se debe realizar en grupos de m├íximo 3 estudiantes.
+ÔùÅ El lenguaje de desarrollo es C, sistema operativo Linux y POSIX. Se deben
+validar las llamadas al sistema.
+ÔùÅ Todos los estudiantes deben cargar el proyecto en BS, para que cada estudiante
+pueda tener acceso al c├│digo el d├¡a de la sustentaci├│n. En su defecto al
+repositorio personal, entonces la entrega ser├í el enlace al repositorio. Nota: En
+caso de que entregue el enlace del repositorio, la ├║ltima fecha de cambio debe
+ser la de la entrega del proyecto, caso contrario NO se evaluar├í.
+ÔùÅ El d├¡a de la sustentaci├│n todos los integrantes del equipo deben estar
+presentes.
+ÔùÅ Cualquier duda sobre el enunciado del proyecto debe consultarla con los
+profesores en forma oportuna o con los MONITORES. La comprensi├│n del
+problema y su correcta implementaci├│n, seg├║n lo indica el enunciado, es parte
+de lo que se est├í evaluando. Adicionalmente, los estudiantes cuentan con los
+MONITORES para pedir orientaciones en caso de necesitarlas.
+ÔùÅ En caso de que alg├║n integrante del grupo NO colabore o trabaje en el
+proyecto, el grupo tiene autoridad de sacarlo y reportar al docente.
+ÔùÅ Los grupos pueden discutir e intercambiar ideas de forma verbal, pero bajo
+ning├║n concepto pueden compartir c├│digo o resultados del informe. Si se
+detecta copia en los productos entregados, o que las fuentes han sido
+proporcionadas por alg├║n LLM, los integrantes de los grupos ser├ín citados a
+la Direcci├│n de Carrera y el caso ser├í elevado al Decano de la Facultad.
+7
+
+=== PAGINA 8 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+Sistema Simulador de Categorizaci├│n Meteorol├│gica
+R├║bricas Proyecto Sistemas Operativos 2026-10
+La Tabla 3, a continuaci├│n presenta los indicadores de desempe├▒o.
+Indicadores de
+Excelente Bueno Deficiente
+Desempe├▒o
+ÔùÅ El estudiante ÔùÅ El estudiante no sigue
+resuelve el problema en su mayor├¡a las
+ÔùÅ Comprender el ÔùÅ Se resuelve el problema seg├║n
+siguiendo las especificaciones dadas
+problema el enunciado, respeta
+especificaciones de para resolver el
+planteado. requerimientos de entrada,
+implementaci├│n, pero problema, no
+ÔùÅ Respetar las salida y todas las
+tiene fallas menores, implementa alguna de
+especificaciones del especificaciones para la
+b├ísicamente en los funcionalidades o las
+enunciado. implementaci├│n.
+requerimientos de entregas fueron
+entrada o de salida incompletas
+ÔùÅ No funcionan todos los
+casos de prueba o bien
+funcionan, pero hay
+ÔùÅ El programa funciona
+errores conceptuales
+perfectamente, seg├║n se
+importantes en el uso
+ÔùÅ Crear una soluci├│n especifica en el enunciado,
+de las llamadas al
+concurrente y para todos los casos de
+ÔùÅ No funcionan todos sistema para creaci├│n
+funcional, al prueba.
+los casos de prueba. y/o comunicaci├│n
+problema usando ÔùÅ La concurrencia y los aspectos
+s├¡ncrona o as├¡ncrona.
+procesos e hilos. de comunicaci├│n s├¡ncrona y
+ÔùÅ Los casos de prueba
+as├¡ncrona se implementan
+relacionados con el
+correctamente.
+error conceptual, se
+invalidan o tienen
+calificaci├│n 0.
+ÔùÅ El c├│digo presenta
+documentaci├│n y estructura
+ÔùÅ Realizar ÔùÅ El c├│digo presenta ÔùÅ Se presenta alguna
+satisfactoria.
+programas, que documentaci├│n con falla importante en 2 o
+ÔùÅ Se ha tomado en cuenta las
+representan la algunas deficiencias. m├ís de los siguientes
+validaciones a las llamadas al
+soluci├│n al ÔùÅ Presenta estructura aspectos:
+sistema.
+problema, de forma y hace validaciones a ÔØû Documentaci├│n
+ÔùÅ No hay objeciones con
+clara, modular, llamadas al sistema. ÔØû Validaci├│n de
+respecto al estilo de
+documentaci├│n ÔùÅ Peque├▒as fallas en llamadas al sistema
+programaci├│n. Se han seguido
+satisfactoria y se estilo. ÔØû Estilo de
+las indicaciones de la gu├¡a de
+manejen todos los ÔùÅ Manejo adecuado de Programaci├│n
+estilo.
+posibles errores. los recursos. ÔØû Manejo adecuado de
+ÔùÅ Cierra archivos, elimina
+ÔùÅ Aplicar el manejo ÔùÅ Instrucciones los recursos.
+recursos temporales, usa solo
+apropiado de los innecesarias, ÔùÅ Se demuestra el uso de
+los sleeps necesarios al
+recursos. incoherencias. LLMs.
+momento de la apertura de
+pipes, entre otros.
+ÔùÅ El estudiante realiza ÔùÅ El estudiante realiza ÔùÅ El estudiante no
+ÔùÅ Sustentaci├│n
+correctamente y en el tiempo parte de la realiza el ejercicio,
+8
+
+=== PAGINA 9 ===
+Sistemas Operativos
+Proyecto: Sistema de Categorizaci├│n Meteorol├│gica
+Febrero 2026
+Indicadores de
+Excelente Bueno Deficiente
+Desempe├▒o
+especificado la modificaci├│n funcionalidad codifica un porcentaje
+solicitada. requerida, muy bajo de la
+pudi├®ndose soluci├│n (< 50%) o lo
+encontrar en alguno poco que realiza est├í
+de los siguientes incorrecto.
+casos:
+ÔùÅ Escribi├│ casi todo el
+c├│digo pero no
+puede mostrar su
+funcionamiento.
+ÔùÅ Escribi├│ al menos el
+50% del c├│digo
+requerido para la
+soluci├│n
+Tabla 3. Indicadores de desempe├▒o del proyecto Sistema Simulador de Categorizaci├│n
+Meteorol├│gica.
+La Tabla 4 a continuaci├│n, presenta la gu├¡a de valoraci├│n para cada uno de los niveles de la
+R├║brica.
+Actividad Porcentaje Excelente Bueno Deficiente
+Comprender el problema planteado.
+Respetar las especificaciones del 3 3 2 <2
+enunciado.
+8
+Calificaci├│n seg├║n casos de prueba teniendo en cuenta
+Soluci├│n del problema usando
+que, si tiene un error conceptual importante, seg├║n lo
+Procesos o hilos (ejecuci├│n)
+indicado en la tabla anterior, se penalizar├í todos los
+casos de prueba relacionados.
+Realizar programas, que
+representan la soluci├│n al
+problema, de forma clara, modular,
+3 3 (3-2] <2
+documentaci├│n satisfactoria y se
+manejan todos los posibles errores.
+Manejo apropiado de los recursos.
+Sustentaci├│n 6 6 3 [1,0]
+Total (20%) 20% 20
+Tabla 4. Gu├¡a de valoraci├│n para cada uno de los niveles de cada r├║brica.
+9
+
